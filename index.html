@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>オートブロック崩しで休憩</title>
+<style>
+  :root{--bg:#0f172a;--bg2:#020617;--fg:#e2e8f0;--muted:#94a3b8}
+  html,body{height:100%;margin:0}
+  body{background:radial-gradient(120vmax 120vmax at 20% 20%, #0b1023, transparent),radial-gradient(120vmax 120vmax at 80% 80%, #0a0f1f, transparent),linear-gradient(135deg,var(--bg),var(--bg2));overflow:hidden;display:grid;place-items:center}
+  canvas{display:block;background:linear-gradient(180deg,rgba(2,6,23,.9),rgba(2,6,23,.98));box-shadow:0 10px 40px rgba(0,0,0,.45), inset 0 0 120px rgba(56,189,248,.04)}
+  .hint{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:var(--muted); font-size:12px; opacity:.75; user-select:none}
+</style>
+</head>
+<body>
+<canvas id="breakout"></canvas>
+<div class="hint"></div>
+<script>
+(()=>{
+  const canvas=document.getElementById('breakout');
+  const ctx=canvas.getContext('2d');
+  let W=0,H=0;
+
+  const COLORS=["#38bdf8","#facc15","#a78bfa","#4ade80","#f87171","#fb923c"];
+  let palette=0;
+
+  const rows=6, cols=10;
+  const blocks=[];
+
+  function fit(){
+    W=innerWidth; H=innerHeight;
+    canvas.width=W; canvas.height=H;
+    initBlocks();
+  }
+  addEventListener('resize', fit, {passive:true});
+  fit();
+
+  function initBlocks(){
+    blocks.length=0;
+    const bw=W/cols, bh=H/20;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        blocks.push({x:c*bw,y:r*bh+40,w:bw-6,h:bh-6,alive:true,color:COLORS[(r+c)%COLORS.length]});
+      }
+    }
+  }
+
+  const ball={x:W/2,y:H/2,vx:3,vy:3,r:10,color:"#fff"};
+
+  function draw(){
+    ctx.fillStyle="rgba(2,6,23,0.15)";
+    ctx.fillRect(0,0,W,H);
+    // blocks
+    for(const b of blocks){
+      if(!b.alive) continue;
+      ctx.fillStyle=b.color;
+      ctx.fillRect(b.x,b.y,b.w,b.h);
+    }
+    // ball
+    ctx.beginPath();
+    ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+    ctx.fillStyle=ball.color;
+    ctx.fill();
+  }
+
+  function update(){
+    ball.x+=ball.vx; ball.y+=ball.vy;
+    if(ball.x<ball.r||ball.x>W-ball.r) ball.vx*=-1;
+    if(ball.y<ball.r) ball.vy*=-1;
+    if(ball.y>H-ball.r){ ball.vy*=-1; ball.y=H-ball.r; }
+    // block collision
+    for(const b of blocks){
+      if(!b.alive) continue;
+      if(ball.x> b.x && ball.x< b.x+b.w && ball.y-ball.r< b.y+b.h && ball.y+ball.r> b.y){
+        b.alive=false;
+        ball.vy*=-1;
+      }
+    }
+    // reset blocks if cleared
+    if(blocks.every(b=>!b.alive)) initBlocks();
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  addEventListener('click',()=>{ palette=(palette+1)%COLORS.length; for(const b of blocks){ b.color=COLORS[(Math.random()*COLORS.length)|0]; }});
+})();
+</script>
+</body>
+</html>
